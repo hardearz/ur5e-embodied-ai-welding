@@ -1,0 +1,20 @@
+project-includes = [
+    "exercises/**/*.py",
+    "scripts/**/*.py",
+    "src/**/*.py",
+    "verify_env.py",
+]
+project-excludes = [
+    "robots",
+    "**/__pycache__",
+]
+search-path = [
+    ".",
+    "src",
+    "src/01_spatial_math",
+    "src/02_mujoco_sim",
+    "exercises",
+    "scripts",
+]
+python-interpreter-path = "robots/bin/python"
+preset = "basic"

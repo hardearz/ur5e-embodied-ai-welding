@@ -1,0 +1,23 @@
+{
+    "python.defaultInterpreterPath": "/home/howley/Documents/Projects/Antigravity/Robotics/robots/bin/python",
+    "python-envs.workspaceSearchPaths": [
+        "./robots",
+        "./**/.venv"
+    ],
+    "python.venvPath": "${workspaceFolder}",
+    "python.venvFolders": [
+        "robots"
+    ],
+    "python.analysis.extraPaths": [
+        "${workspaceFolder}/src",
+        "${workspaceFolder}/src/01_spatial_math",
+        "${workspaceFolder}/src/02_mujoco_sim",
+        "${workspaceFolder}/exercises",
+        "${workspaceFolder}/scripts"
+    ],
+    "terminal.integrated.env.linux": {
+        "VIRTUAL_ENV": "${workspaceFolder}/robots",
+        "PATH": "${workspaceFolder}/robots/bin:${env:PATH}",
+        "PYTHONPATH": "${workspaceFolder}/src:${workspaceFolder}"
+    }
+}

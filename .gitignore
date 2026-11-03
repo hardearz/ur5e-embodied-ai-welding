@@ -1,0 +1,16 @@
+robots/
+.venv/
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.pytest_cache/
+.ruff_cache/
+*.egg-info/
+dist/
+build/
+*.h5
+*.zarr
+data/recordings/
+outputs/*.pt
+outputs/**/*_raw.mp4
