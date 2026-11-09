@@ -98,7 +98,7 @@ Robotics/
 ### B. Multi-Camera Rig for Visuomotor Policies
 - **Workspace Overview Camera (`workspace_cam`):** Third-person perspective capturing global workcell context and target object locations.
 - **Eye-in-Hand Wrist Camera (`wrist_cam`):** Mounted on the tool flange directly above the Tool-Center-Point (TCP) with an alignment crosshair, essential for fine industrial dexterity.
-- **Synchronized Offscreen Pipeline:** Rendered at 30 FPS using hardware EGL acceleration directly to `outputs/ur5e_welding_demo.mp4`.
+- **Synchronized Offscreen Pipeline:** Rendered at 25 FPS (25 Hz) using hardware EGL acceleration directly to `outputs/ur5e_welding_demo.mp4`.
 
 ---
 

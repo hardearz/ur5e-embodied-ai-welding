@@ -58,7 +58,7 @@ class MultiEpisodeDataset(Dataset):
 
 
 # ==============================================================================
-# TODO 1 & 2: Visuomotor Policy Architecture
+# Part 1: Visuomotor Policy Architecture
 # ==============================================================================
 class VisuomotorPolicy(nn.Module):
     def __init__(self, visual_feature_dim: int = 64, proprio_dim: int = 32, action_dim: int = 6):
@@ -115,18 +115,16 @@ class VisuomotorPolicy(nn.Module):
         Expected Return:
             (B, 6) predicted action tensor
         """
-        # TODO: Implement the forward pass
         z_vis = self.vision_encoder(image)
         z_prop = self.proprio_encoder(qpos)
         z = torch.cat([z_vis, z_prop], dim=1)
         action_pred = self.action_head(z)
 
-
         return action_pred
 
 
 # ==============================================================================
-# TODO 3: The Behavior Cloning Training Step
+# Part 2: The Behavior Cloning Training Step
 # ==============================================================================
 def train_one_epoch(
     policy: nn.Module,
@@ -155,7 +153,6 @@ def train_one_epoch(
         qpos = batch["qpos"].to(device)
         actions = batch["action"].to(device)
 
-        # TODO: Implement the forward pass, loss calculation, backward pass, and optimizer step!
         optimizer.zero_grad()
         pred = policy(images, qpos)
         loss = criterion(pred, actions)
@@ -191,7 +188,7 @@ if __name__ == "__main__":
     dummy_out = policy(dummy_img, dummy_qpos)
     assert dummy_out.shape == (4, 6), f"Expected policy output shape (4, 6), got {dummy_out.shape}"
     assert not torch.allclose(dummy_out, torch.zeros_like(dummy_out)), "Policy forward pass should not return all zeros!"
-    print("PASS: TODO 1 & 2 (Policy Architecture & Forward Pass)")
+    print("PASS: Part 1 (Policy Architecture & Forward Pass)")
 
     # Run 60 training epochs with Cosine Annealing LR so 1-step BC resolves 25 Hz steps
     num_epochs = 60
@@ -210,7 +207,7 @@ if __name__ == "__main__":
             print(f"  Epoch [{epoch:02d}/{num_epochs}] | MSE Loss: {loss:.6f}")
 
     assert final_loss < initial_loss, f"Loss did not decrease! Initial: {initial_loss:.4f}, Final: {final_loss:.4f}"
-    print(f"\nPASS: TODO 3 (Training Loop: Loss decreased from {initial_loss:.4f} -> {final_loss:.4f})")
+    print(f"\nPASS: Part 2 (Training Loop: Loss decreased from {initial_loss:.4f} -> {final_loss:.4f})")
 
     # Save trained policy weights
     os.makedirs("outputs", exist_ok=True)

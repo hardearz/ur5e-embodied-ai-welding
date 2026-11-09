@@ -18,6 +18,8 @@ Key Robotics Concepts Demonstrated:
 """
 
 import os
+import shutil
+import subprocess
 import mujoco
 import numpy as np
 import cv2
@@ -220,8 +222,15 @@ def run_industrial_welding_demo(output_video: str = "outputs/ur5e_welding_demo.m
         ("Retract Tool",    retract,      90),
     ]
 
+    # 5 substeps * 0.002s = 0.010s (10ms per control cycle -> 100 Hz control rate).
+    # Recording every 4 control cycles gives 4 * 10ms = 40ms per frame (25.0 Hz),
+    # matching a 25.0 FPS video writer for true 1:1 real-time playback (6.62s total).
+    record_fps = 25.0
+    render_interval = 4
+
+    raw_video = output_video.replace(".mp4", "_raw.mp4") if output_video.endswith(".mp4") else output_video + "_raw.mp4"
     fourcc = cv2.VideoWriter_fourcc(*"mp4v")
-    video_writer = cv2.VideoWriter(output_video, fourcc, 30.0, (960, 360))
+    video_writer = cv2.VideoWriter(raw_video, fourcc, record_fps, (960, 360))
 
     frame_count = 0
     total_steps = sum(steps for _, _, steps in waypoints)
@@ -239,15 +248,15 @@ def run_industrial_welding_demo(output_video: str = "outputs/ur5e_welding_demo.m
             alpha = 0.5 * (1 - np.cos(np.pi * t))
             curr_target = (1 - alpha) * start_wp + alpha * target_wp
 
-            # Inner physics steps per control step (2 sub-steps at dt=0.002s -> 4ms per control cycle)
-            for _ in range(2):
+            # Inner physics steps per control step (5 sub-steps at dt=0.002s -> 10ms per control cycle = 100 Hz)
+            for _ in range(5):
                 env.step_control(curr_target)
 
-            # Record dashboard frame at ~30 Hz (every 4 control cycles)
-            if step % 4 == 0:
+            # Record dashboard frame at 25.0 Hz (every 4 control cycles: 4 * 10ms = 40ms)
+            if step % render_interval == 0:
                 frame = env.render_dashboard()
-                cv2.putText(frame, f"Phase: {phase_name}", (390, 30),
-                            cv2.FONT_HERSHEY_SIMPLEX, 0.65, (0, 255, 255), 2, cv2.LINE_AA)
+                cv2.putText(frame, f"Phase: {phase_name}", (15, 60),
+                            cv2.FONT_HERSHEY_SIMPLEX, 0.60, (0, 255, 255), 2, cv2.LINE_AA)
                 video_writer.write(frame)
                 frame_count += 1
 
@@ -256,6 +265,25 @@ def run_industrial_welding_demo(output_video: str = "outputs/ur5e_welding_demo.m
         print(f"   Phase Complete! Final TCP: {np.round(final_tcp, 3)}, Error: {err_mm:.1f} mm | Contacts: {env.data.ncon}")
 
     video_writer.release()
+
+    # Transcode to H.264 using ffmpeg for universal browser compatibility and generate GIF preview
+    gif_path = output_video.replace(".mp4", ".gif") if output_video.endswith(".mp4") else output_video + ".gif"
+    ffmpeg_bin = shutil.which("ffmpeg") or "/home/howley/anaconda3/envs/XCS224R_CUDA/bin/ffmpeg"
+    if os.path.exists(ffmpeg_bin):
+        subprocess.run(
+            [ffmpeg_bin, "-y", "-i", raw_video, "-vcodec", "libx264", "-crf", "22", "-pix_fmt", "yuv420p", output_video],
+            check=False, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
+        )
+        if os.path.exists(output_video) and os.path.exists(raw_video):
+            os.remove(raw_video)
+        target_vid = output_video if os.path.exists(output_video) else raw_video
+        subprocess.run(
+            [ffmpeg_bin, "-y", "-i", target_vid, "-vf", "fps=15,scale=720:-1:flags=lanczos", gif_path],
+            check=False, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
+        )
+    else:
+        if os.path.exists(raw_video):
+            os.rename(raw_video, output_video)
     print("\n" + "=" * 70)
     print(f"Video saved successfully to: {output_video}")
     print(f"Total Frames Rendered: {frame_count}")

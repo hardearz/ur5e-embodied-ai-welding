@@ -25,7 +25,7 @@ CHUNK_DIM = ACTION_HORIZON * ACTION_DIM  # 16 * 6 = 96 dimensions
 
 
 # ==============================================================================
-# TODO 1: Action Chunking Multi-Episode Dataset
+# Part 1: Action Chunking Multi-Episode Dataset
 # ==============================================================================
 class ChunkedDemonstrationDataset(Dataset):
     """
@@ -50,11 +50,7 @@ class ChunkedDemonstrationDataset(Dataset):
                 num_steps = len(actions)
                 for t in range(num_steps):
                     # Extract slice t : t + horizon
-                    # TODO 1: Extract the action chunk of length `self.horizon`.
-                    # If t + self.horizon > num_steps, slice up to num_steps and pad the remainder
-                    # by repeating the final action actions[-1].
-                    # The resulting chunk should have shape (self.horizon, ACTION_DIM).
-                    chunk = np.array([actions[-1]] * horizon, dtype=np.float32)  # Implement the slice and padding logic
+                    chunk = np.array([actions[-1]] * horizon, dtype=np.float32)
                     tmp = actions[t: t + horizon]
                     chunk[:len(tmp)] = tmp
 
@@ -185,7 +181,7 @@ class FlowMatchingPolicy(nn.Module):
 
 
 # ==============================================================================
-# TODO 2: Flow Matching Training Loss
+# Part 2: Flow Matching Training Loss
 # ==============================================================================
 def compute_flow_matching_loss(
     policy: FlowMatchingPolicy,
@@ -208,7 +204,6 @@ def compute_flow_matching_loss(
     """
     B = x_1.shape[0]
 
-    # TODO 2: Implement the 6 steps of Flow Matching training + Temporal Smoothness Regularization!
     x_0 = torch.randn_like(x_1)
     t = torch.rand((B, 1), dtype=torch.float32, device=device)
     x_t = (1.0 - t) * x_0 + t * x_1
@@ -228,7 +223,7 @@ def compute_flow_matching_loss(
 
 
 # ==============================================================================
-# TODO 3: Fast Euler ODE Sampler for Trajectory Generation
+# Part 3: Fast Euler ODE Sampler for Trajectory Generation
 # ==============================================================================
 def sample_action_chunk(
     policy: FlowMatchingPolicy,
@@ -240,7 +235,7 @@ def sample_action_chunk(
 ) -> np.ndarray:
     """
     Generates a full 16-step action trajectory chunk from noise using Euler integration:
-      1. Start at pure Gaussian noise: x ~ N(0, I) of shape (1, CHUNK_DIM).
+      1. Start at low-temperature Gaussian noise: x ~ N(0, sigma^2 I) (sigma=0.15) of shape (1, CHUNK_DIM).
       2. Step size: dt = 1.0 / num_euler_steps.
       3. For step k from 0 to num_euler_steps - 1:
            current_t = k * dt
@@ -251,7 +246,6 @@ def sample_action_chunk(
     """
     policy.eval()
     with torch.no_grad():
-        # TODO 3: Implement Euler ODE integration across `num_euler_steps`!
         # Encode vision & proprioception ONCE outside the Euler loop (~4.5x faster ODE sampling)
         z_vis, z_prop = policy.encode_observations(image, qpos)
 
@@ -286,18 +280,18 @@ if __name__ == "__main__":
     device = "cuda" if torch.cuda.is_available() else "cpu"
     print(f"Device: {device} ({torch.cuda.get_device_name(0) if device == 'cuda' else 'CPU'})")
 
-    # 1. Test Dataset Slicing (TODO 1)
+    # 1. Test Dataset Slicing
     dataset = ChunkedDemonstrationDataset("data/demos", horizon=ACTION_HORIZON)
     dataloader = DataLoader(dataset, batch_size=32, shuffle=True)
     sample_item = dataset[0]
 
-    assert sample_item["action_chunk"] is not None, "TODO 1: action_chunk is None!"
+    assert sample_item["action_chunk"] is not None, "action_chunk is None!"
     assert sample_item["action_chunk"].shape == (CHUNK_DIM,), (
         f"Expected action chunk shape ({CHUNK_DIM},), got {sample_item['action_chunk'].shape}"
     )
-    print(f"PASS: TODO 1 (Chunked Dataset Loaded: {len(dataset)} trajectory pairs, horizon={ACTION_HORIZON})")
+    print(f"PASS: Part 1 (Chunked Dataset Loaded: {len(dataset)} trajectory pairs, horizon={ACTION_HORIZON})")
 
-    # 2. Test Flow Matching Loss (TODO 2)
+    # 2. Test Flow Matching Loss
     policy = FlowMatchingPolicy().to(device)
     batch = next(iter(dataloader))
     imgs = batch["image"].to(device)
@@ -305,22 +299,22 @@ if __name__ == "__main__":
     x1s = batch["action_chunk"].to(device)
 
     loss = compute_flow_matching_loss(policy, x1s, imgs, qps, device)
-    assert loss is not None, "TODO 2: compute_flow_matching_loss returned None!"
+    assert loss is not None, "compute_flow_matching_loss returned None!"
     assert loss.dim() == 0, f"Expected scalar loss, got shape {loss.shape}"
     assert loss.item() > 0.0, "Loss should be positive!"
-    print("PASS: TODO 2 (Flow Matching Loss Calculation)")
+    print("PASS: Part 2 (Flow Matching Loss Calculation)")
 
-    # 3. Test Euler ODE Sampler (TODO 3)
+    # 3. Test Euler ODE Sampler
     dummy_img = torch.zeros(1, 3, 120, 160, device=device)
     dummy_qp = torch.zeros(1, 6, device=device)
     generated_chunk = sample_action_chunk(policy, dummy_img, dummy_qp, num_euler_steps=8, stats=dataset.stats, device=device)
 
-    assert generated_chunk is not None, "TODO 3: sample_action_chunk returned None!"
+    assert generated_chunk is not None, "sample_action_chunk returned None!"
     assert isinstance(generated_chunk, np.ndarray), f"Expected numpy array, got {type(generated_chunk)}"
     assert generated_chunk.shape == (ACTION_HORIZON, ACTION_DIM), (
         f"Expected trajectory shape ({ACTION_HORIZON}, {ACTION_DIM}), got {generated_chunk.shape}"
     )
-    print("PASS: TODO 3 (Fast Euler ODE Generation: 8 steps)")
+    print("PASS: Part 3 (Fast Euler ODE Generation: 8 steps)")
 
     # 4. Train the Flow Matching Policy (240 epochs with Cosine Annealing LR)
     num_epochs = 240

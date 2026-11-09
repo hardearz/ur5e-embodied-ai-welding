@@ -9,7 +9,7 @@ import numpy as np
 
 
 # ==============================================================================
-# TODO 1: Forward Kinematics (FK)
+# Part 1: Forward Kinematics (FK)
 # ==============================================================================
 def forward_kinematics(theta1: float, theta2: float, L1: float = 1.0, L2: float = 1.0) -> np.ndarray:
     """
@@ -36,7 +36,7 @@ def forward_kinematics(theta1: float, theta2: float, L1: float = 1.0, L2: float 
 
 
 # ==============================================================================
-# TODO 2: The Analytical Jacobian Matrix J(theta)
+# Part 2: The Analytical Jacobian Matrix J(theta)
 # ==============================================================================
 def compute_jacobian(theta1: float, theta2: float, L1: float = 1.0, L2: float = 1.0) -> np.ndarray:
     """
@@ -64,7 +64,7 @@ def compute_jacobian(theta1: float, theta2: float, L1: float = 1.0, L2: float = 
 
 
 # ==============================================================================
-# TODO 3: Damped Least Squares (DLS) Pseudo-Inverse
+# Part 3: Damped Least Squares (DLS) Pseudo-Inverse
 # ==============================================================================
 def dls_inverse(J: np.ndarray, damping: float = 0.05) -> np.ndarray:
     """
@@ -77,7 +77,7 @@ def dls_inverse(J: np.ndarray, damping: float = 0.05) -> np.ndarray:
 
 
 # ==============================================================================
-# TODO 4: The Closed-Loop Inverse Kinematics (IK) Solver
+# Part 4: The Closed-Loop Inverse Kinematics (IK) Solver
 # ==============================================================================
 def solve_ik(
     target_xy: np.ndarray,
@@ -126,16 +126,16 @@ if __name__ == "__main__":
     # Test 1: Forward Kinematics
     # When theta1 = 0, theta2 = 0 -> Arm stretched along X-axis: x = L1 + L2 = 2.0, y = 0.0
     pt_stretched = forward_kinematics(0.0, 0.0, L1, L2)
-    assert np.allclose(pt_stretched, [2.0, 0.0]), f"TODO 1 Failed for [0, 0]: got {pt_stretched}"
+    assert np.allclose(pt_stretched, [2.0, 0.0]), f"Part 1 Failed for [0, 0]: got {pt_stretched}"
 
     # When theta1 = 90 deg (pi/2), theta2 = 0 -> Arm pointing straight up along Y-axis: x = 0, y = 2.0
     pt_up = forward_kinematics(np.pi / 2, 0.0, L1, L2)
-    assert np.allclose(pt_up, [0.0, 2.0]), f"TODO 1 Failed for [pi/2, 0]: got {pt_up}"
+    assert np.allclose(pt_up, [0.0, 2.0]), f"Part 1 Failed for [pi/2, 0]: got {pt_up}"
 
     # When theta1 = 0, theta2 = 90 deg (pi/2) -> Elbow at (1, 0), hand at (1, 1)
     pt_bent = forward_kinematics(0.0, np.pi / 2, L1, L2)
-    assert np.allclose(pt_bent, [1.0, 1.0]), f"TODO 1 Failed for [0, pi/2]: got {pt_bent}"
-    print("PASS: TODO 1 (forward_kinematics)")
+    assert np.allclose(pt_bent, [1.0, 1.0]), f"Part 1 Failed for [0, pi/2]: got {pt_bent}"
+    print("PASS: Part 1 (forward_kinematics)")
 
     # Test 2: Analytical Jacobian
     # At [0, pi/2], hand is at (1, 1).
@@ -145,8 +145,8 @@ if __name__ == "__main__":
         [-1.0, -1.0],
         [ 1.0,  0.0]
     ])
-    assert np.allclose(J_bent, expected_J), f"TODO 2 Failed!\nExpected:\n{expected_J}\nGot:\n{J_bent}"
-    print("PASS: TODO 2 (compute_jacobian)")
+    assert np.allclose(J_bent, expected_J), f"Part 2 Failed!\nExpected:\n{expected_J}\nGot:\n{J_bent}"
+    print("PASS: Part 2 (compute_jacobian)")
 
     # Test 3: Damped Least Squares
     # At [0, pi/2], J = [[-1, -1], [1, 0]]
@@ -156,14 +156,14 @@ if __name__ == "__main__":
         [-0.0025,  0.9950],
         [-0.9950, -0.9925]
     ])
-    assert np.allclose(J_dls, expected_dls, atol=1e-3), f"TODO 3 Failed!\nExpected:\n{expected_dls}\nGot:\n{J_dls}"
+    assert np.allclose(J_dls, expected_dls, atol=1e-3), f"Part 3 Failed!\nExpected:\n{expected_dls}\nGot:\n{J_dls}"
     
     # Also verify singularity safety (arm fully stretched: theta2 = 0, det(J) == 0)
     J_singular = compute_jacobian(0.0, 0.0, L1, L2)
     assert np.isclose(np.linalg.det(J_singular), 0.0), "Sanity check: fully stretched arm must have det(J) == 0"
     J_dls_sing = dls_inverse(J_singular, damping=0.1)
     assert not np.any(np.isnan(J_dls_sing)) and not np.any(np.isinf(J_dls_sing)), "DLS returned NaN or Inf at singularity!"
-    print("PASS: TODO 3 (dls_inverse)")
+    print("PASS: Part 3 (dls_inverse)")
 
     # Test 4: Inverse Kinematics Solver
     target = np.array([0.5, 1.2])
@@ -171,7 +171,7 @@ if __name__ == "__main__":
     q_sol = solve_ik(target, q_seed, L1, L2)
     final_pos = forward_kinematics(q_sol[0], q_sol[1], L1, L2)
     err = np.linalg.norm(target - final_pos)
-    assert err < 1e-3, f"TODO 4 Failed: Hand position {final_pos} did not reach target {target}! Error: {err:.4f}"
-    print(f"PASS: TODO 4 (solve_ik: reached target {target} with error {err*1000:.3f} mm)")
+    assert err < 1e-3, f"Part 4 Failed: Hand position {final_pos} did not reach target {target}! Error: {err:.4f}"
+    print(f"PASS: Part 4 (solve_ik: reached target {target} with error {err*1000:.3f} mm)")
 
     print("\nCONGRATULATIONS! You built a complete kinematics and IK engine from scratch!")

@@ -44,7 +44,7 @@ ACTION_HORIZON = 16
 
 
 # ==============================================================================
-# TODO 1: Horizon-Weighted Blending (Near-Relative -> Far-Absolute)
+# Part 1: Horizon-Weighted Blending (Near-Relative -> Far-Absolute)
 # ==============================================================================
 def ensemble_horizon_weighted(
     chunk_pred: np.ndarray,
@@ -58,10 +58,11 @@ def ensemble_horizon_weighted(
         preventing accumulated drift.
         
     Formula for step k in [0, H-1]:
-      alpha_k = k / (H - 1)  in [0.0, 1.0]
-      q_rel_k = q_current + (chunk_pred[k] - chunk_pred[0])
-      q_abs_k = chunk_pred[k]
-      a_k     = (1.0 - alpha_k) * q_rel_k + alpha_k * q_abs_k
+      alpha_k  = k / (H - 1)  in [0.0, 1.0]
+      q_anchor = 0.25 * q_current + 0.75 * chunk_pred[0]
+      q_rel_k  = q_anchor + 1.15 * (chunk_pred[k] - chunk_pred[0])
+      q_abs_k  = chunk_pred[k]
+      a_k      = (1.0 - alpha_k) * q_rel_k + alpha_k * q_abs_k
       
     Returns:
       ensembled_chunk of shape (H, 6)
@@ -69,7 +70,6 @@ def ensemble_horizon_weighted(
     H = len(chunk_pred)
     ensembled = np.zeros_like(chunk_pred)
     
-    # TODO 1: Implement Horizon-Weighted Blending
     # Preserve 75% of the PD servo compliance lead at k=0 while anchoring to q_current,
     # and apply relative chunk displacements with 1.15x forward momentum gain.
     q_anchor = 0.25 * q_current + 0.75 * chunk_pred[0]
@@ -83,7 +83,7 @@ def ensemble_horizon_weighted(
 
 
 # ==============================================================================
-# TODO 2: Endpoint-Anchored Trajectory Bridge
+# Part 2: Endpoint-Anchored Trajectory Bridge
 # ==============================================================================
 def ensemble_endpoint_anchored(
     chunk_pred: np.ndarray,
@@ -108,7 +108,6 @@ def ensemble_endpoint_anchored(
     step_end = chunk_pred[-1] - chunk_pred[-2] if H > 1 else np.zeros(6)
     q_target = chunk_pred[-1] + 0.50 * step_end
 
-    # TODO 2: Implement Endpoint-Anchored Trajectory Bridge
     for k in range(H):
         w_k = k / max(1, H - 1)
         ensembled[k] = (1.0 - w_k) * q_start + w_k * q_target
@@ -117,7 +116,7 @@ def ensemble_endpoint_anchored(
 
 
 # ==============================================================================
-# TODO 3: Direction-Decomposed Cartesian Control (Tangent Relative + Normal Absolute)
+# Part 3: Direction-Decomposed Cartesian Control (Tangent Relative + Normal Absolute)
 # ==============================================================================
 def ensemble_direction_decomposed(
     env: UR5eIndustrialWorkcell,
@@ -147,7 +146,6 @@ def ensemble_direction_decomposed(
         jacobians.append(jacp[:, :6].copy())
     pred_tcp_positions = np.array(pred_tcp_positions)
 
-    # TODO 3: Apply Task-Space Tangential Feedforward + Normal Seam Projection via J_pinv
     # Use a local 4-step forward window velocity so Retract at step 15 does not contaminate mid-weld steps
     damping_sq = 0.02 ** 2
     for k in range(H):
@@ -170,7 +168,7 @@ def ensemble_direction_decomposed(
 
 
 # ==============================================================================
-# TODO 4: Classical Feedforward Velocity + Feedback Position Compensation
+# Part 4: Classical Feedforward Velocity + Feedback Position Compensation
 # ==============================================================================
 def ensemble_feedforward_velocity(
     chunk_pred: np.ndarray,
@@ -191,7 +189,6 @@ def ensemble_feedforward_velocity(
     H = len(chunk_pred)
     ensembled = np.zeros_like(chunk_pred)
 
-    # TODO 4: Implement Feedforward Velocity Compensation using local 4-step reference velocity
     for k in range(H):
         k_next = min(H - 1, k + 4)
         span = max(1, k_next - k)

@@ -13,7 +13,7 @@ from torch.utils.data import Dataset
 
 
 # ==============================================================================
-# TODO 1: In-Memory Episode Buffer
+# Part 1: In-Memory Episode Buffer
 # ==============================================================================
 class EpisodeBuffer:
     """
@@ -37,7 +37,6 @@ class EpisodeBuffer:
             qvel: (6,) float32 joint velocities
             action: (6,) float32 commanded action
         """
-        # TODO: Append each incoming array to its corresponding list above
         self.wrist_images.append(wrist_img)
         self.workspace_images.append(workspace_img)
         self.qpos_list.append(qpos)
@@ -49,7 +48,7 @@ class EpisodeBuffer:
 
 
 # ==============================================================================
-# TODO 2: Writing Episode Buffer to HDF5 (.h5) File
+# Part 2: Writing Episode Buffer to HDF5 (.h5) File
 # ==============================================================================
 def save_episode_to_hdf5(buffer: EpisodeBuffer, filepath: str):
     """
@@ -93,7 +92,7 @@ def save_episode_to_hdf5(buffer: EpisodeBuffer, filepath: str):
 
 
 # ==============================================================================
-# TODO 3: PyTorch Dataset for Training Imitation Learning Policies
+# Part 3: PyTorch Dataset for Training Imitation Learning Policies
 # ==============================================================================
 class RobotDemonstrationDataset(Dataset):
     """
@@ -141,9 +140,7 @@ class RobotDemonstrationDataset(Dataset):
         # 3. Convert qpos and action to torch.float32 tensors
         qpos_tensor = torch.from_numpy(raw_qpos).float()
         action_tensor = torch.from_numpy(raw_action).float()
-        # 4. Return {"image": img_tensor, "qpos": qpos_tensor, "action": action_tensor}
 
-        # TODO: Implement steps 1-4
         return {
             "image": img_tensor,
             "qpos": qpos_tensor,
@@ -171,7 +168,7 @@ if __name__ == "__main__":
         buffer.add_step(dummy_wrist, dummy_work, dummy_qpos, dummy_qvel, dummy_act)
 
     assert len(buffer) == 10, f"Expected buffer length 10, got {len(buffer)}"
-    print("PASS: TODO 1 (EpisodeBuffer)")
+    print("PASS: Part 1 (EpisodeBuffer)")
 
     # Test 2: save_episode_to_hdf5
     save_episode_to_hdf5(buffer, test_h5_path)
@@ -188,7 +185,7 @@ if __name__ == "__main__":
         assert wrist_shape == (10, H, W, 3), f"Expected shape (10, {H}, {W}, 3), got {wrist_shape}"
         action_shape = f["action"].shape
         assert action_shape == (10, 6), f"Expected shape (10, 6), got {action_shape}"
-    print("PASS: TODO 2 (save_episode_to_hdf5)")
+    print("PASS: Part 2 (save_episode_to_hdf5)")
 
     # Test 3: PyTorch Dataset
     dataset = RobotDemonstrationDataset(test_h5_path)
@@ -201,7 +198,7 @@ if __name__ == "__main__":
     assert sample["image"].dtype == torch.float32, "Image tensor must be float32"
     assert sample["qpos"].shape == (6,), f"Expected qpos shape (6,), got {sample['qpos'].shape}"
     assert sample["action"].shape == (6,), f"Expected action shape (6,), got {sample['action'].shape}"
-    print("PASS: TODO 3 (RobotDemonstrationDataset)")
+    print("PASS: Part 3 (RobotDemonstrationDataset)")
 
     # Clean up test file
     if os.path.exists(test_h5_path):

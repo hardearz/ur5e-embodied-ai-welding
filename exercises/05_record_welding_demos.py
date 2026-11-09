@@ -34,16 +34,16 @@ IMG_HEIGHT, IMG_WIDTH = 120, 160
 
 
 # ==============================================================================
-# TODO 1: Record a Single Episode
+# Part 1: Record a Single Episode
 # ==============================================================================
 def record_single_episode(env: UR5eIndustrialWorkcell, seam_start_y: float, seam_end_y: float) -> EpisodeBuffer:
     """
     Executes a seam welding demonstration and records observations into an EpisodeBuffer:
       1. Approach Seam: Safe descent from home to (0.52, seam_start_y, 0.435)
-      2. Welding Seam: Linear travel from seam_start_y to seam_end_y
-      3. Retract: Vertical lift back to inspection height (0.48, 0.0, 0.65)
+      2. Welding Seam: Linear travel from seam_start_y to seam_end_y (with Crater Dwell)
+      3. Retract: Vertical lift back to inspection height (0.50, seam_end_y, 0.600)
       
-    At every control step (every 4th physics cycle):
+    At every control step (every 20 physics substeps -> 25 Hz control rate):
       - Render wrist_cam & workspace_cam and resize to (IMG_WIDTH, IMG_HEIGHT)
       - Read qpos and qvel from env.data
       - Read current action (commanded joint angles in env.data.ctrl[:6])
@@ -54,9 +54,9 @@ def record_single_episode(env: UR5eIndustrialWorkcell, seam_start_y: float, seam
 
     # Define non-intersecting industrial welding cycle waypoints:
     # 1. Transit at clearance height (Z=0.53m) to above seam start
-    # 2. Vertical touchdown to seam start (Z=0.435m, Y=-0.15m)
-    # 3. Linear weld pass along full 300mm seam (Y: -0.15m -> +0.15m at Z=0.435m)
-    # 4. Vertical retract at seam end (Y=+0.15m, Z=0.60m)
+    # 2. Vertical touchdown to seam start (Z=0.435m, Y=-0.16m)
+    # 3. Linear weld pass along full 320mm seam (Y: -0.16m -> +0.16m at Z=0.435m) + Crater Dwell
+    # 4. Vertical retract at seam end (Y=+0.16m, Z=0.60m)
     above_start_wp = np.array([0.52, seam_start_y, 0.530])
     start_wp       = np.array([0.52, seam_start_y, 0.435])
     end_wp         = np.array([0.52, seam_end_y,   0.435])
@@ -96,14 +96,13 @@ def record_single_episode(env: UR5eIndustrialWorkcell, seam_start_y: float, seam
             qvel = env.data.qvel[:6].copy().astype(np.float32)
             action = env.data.ctrl[:6].copy().astype(np.float32)
 
-            # TODO: Add the step to `buffer` using buffer.add_step(...)
             buffer.add_step(wrist_img, work_img, qpos, qvel, action)
 
     return buffer
 
 
 # ==============================================================================
-# TODO 2: Collect Dataset with Initial Condition Perturbations
+# Part 2: Collect Dataset with Initial Condition Perturbations
 # ==============================================================================
 def collect_demonstration_dataset(num_episodes: int = 3, output_dir: str = "data/demos"):
     """
@@ -124,7 +123,6 @@ def collect_demonstration_dataset(num_episodes: int = 3, output_dir: str = "data
         print(f"\n>> Recording Episode {ep}: seam shifted by {shift_y*1000:+.1f} mm...")
         buffer = record_single_episode(env, seam_start_y, seam_end_y)
 
-        # TODO: Save the buffer to f"{output_dir}/episode_{ep}.h5" using save_episode_to_hdf5
         save_episode_to_hdf5(buffer, f"{output_dir}/episode_{ep}.h5")
         print(f"   Episode {ep} recorded! Total steps: {len(buffer)}")
 

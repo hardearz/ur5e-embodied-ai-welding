@@ -38,7 +38,7 @@ IMG_HEIGHT, IMG_WIDTH = 120, 160
 
 
 # ==============================================================================
-# TODO 1: Observation Preprocessing & Policy Inference
+# Part 1: Observation Preprocessing & Policy Inference
 # ==============================================================================
 def predict_action(
     policy: VisuomotorPolicy,
@@ -67,7 +67,6 @@ def predict_action(
            pred_action = policy(image_tensor, qpos_tensor)
       7. Return pred_action as a 1D numpy array of shape (6,).
     """
-    # TODO 1: Implement observation preprocessing and policy inference!
     image = cv2.resize(wrist_frame, (IMG_WIDTH, IMG_HEIGHT))
     image = np.transpose(image,(2, 0, 1))
     image = image.astype(np.float32) / 255
@@ -80,7 +79,7 @@ def predict_action(
 
 
 # ==============================================================================
-# TODO 2: Autonomous Closed-Loop Rollout Execution Loop
+# Part 2: Autonomous Closed-Loop Rollout Execution Loop
 # ==============================================================================
 def run_closed_loop_rollout(
     env: UR5eIndustrialWorkcell,
@@ -92,12 +91,12 @@ def run_closed_loop_rollout(
     Executes an autonomous closed-loop rollout:
       - Starts at env.reset()
       - For each step in max_steps:
-          1. Render wrist_cam: env.render_frame("wrist_cam")
-          2. Read joint positions: env.data.qpos[:6]
-          3. Predict action: action = predict_action(policy, wrist_raw, qpos, device)
-          4. Command robot: env.data.ctrl[:6] = action
-          5. Advance physics: call mujoco.mj_step(env.model, env.data) twice (matching 2 physics steps per demo step)
-          6. Record telemetry: TCP position, dashboard video frame, joint angles
+           1. Render wrist_cam: env.render_frame("wrist_cam")
+           2. Read joint positions: env.data.qpos[:6]
+           3. Predict action: action = predict_action(policy, wrist_raw, qpos, device)
+           4. Command robot: env.data.ctrl[:6] = action
+           5. Advance physics: step 20 physics substeps (matching 25 Hz control loop at dt=0.04s)
+           6. Record telemetry: TCP position, dashboard video frame, joint angles
           
     Returns:
         dict with keys:
@@ -120,11 +119,9 @@ def run_closed_loop_rollout(
         qpos = env.data.qpos[:6].copy()
 
         # 2. Predict next joint action via visuomotor policy
-        # TODO 2: Call predict_action(...) to get commanded joint targets
         action = predict_action(policy, wrist_raw, qpos, device)
 
         # 3. Apply action to robot actuators
-        # TODO 2: Set env.data.ctrl[:6] = action
         env.data.ctrl[:6] = action
 
         # 4. Advance physics simulation by 20 physics substeps (25 Hz control loop, dt = 0.04s)
@@ -151,13 +148,13 @@ def run_closed_loop_rollout(
 
 
 # ==============================================================================
-# TODO 3: Seam Tracking Accuracy Metric Evaluation
+# Part 3: Seam Tracking Accuracy Metric Evaluation
 # ==============================================================================
 def evaluate_seam_tracking(tcp_positions: np.ndarray) -> dict:
     """
     Analyzes the TCP trajectory during the active welding portion:
-      - The nominal seam line is located along X = 0.520 m, Z = 0.435 m, from Y = -0.12 m to +0.12 m.
-      - Extract all points where Y is within [-0.10, +0.10] m (the active weld pass).
+      - The nominal seam line is located along X = 0.520 m, Z = 0.435 m, from Y = -0.16 m to +0.16 m.
+      - Extract all points where Y is within [-0.155, +0.155] m and Z <= 0.455 m (the active weld pass).
       - Compute cross-track error: e_cross = sqrt((X - 0.520)^2 + (Z - 0.435)^2).
       
     Returns:
@@ -167,7 +164,6 @@ def evaluate_seam_tracking(tcp_positions: np.ndarray) -> dict:
           - "weld_points_count": Number of timesteps spent actively in the seam corridor.
     """
     # Filter points where arm is in the active welding region (Y between -0.10 and +0.10)
-    # TODO 3: Compute mean and max cross-track error to (X=0.520, Z=0.435) in millimeters
     seam_x = 0.520
     seam_z = 0.435
 
@@ -210,20 +206,20 @@ if __name__ == "__main__":
     # Initialize environment
     env = UR5eIndustrialWorkcell()
 
-    # Unit Test TODO 1: predict_action
+    # Unit Test: predict_action
     dummy_frame = np.zeros((480, 640, 3), dtype=np.uint8)
     dummy_q = env.home_qpos.copy()
     act = predict_action(policy, dummy_frame, dummy_q, device)
 
-    assert act is not None, "TODO 1: predict_action returned None!"
+    assert act is not None, "predict_action returned None!"
     assert isinstance(act, np.ndarray), f"Expected numpy array from predict_action, got {type(act)}"
     assert act.shape == (6,), f"Expected action shape (6,), got {act.shape}"
-    print("PASS: TODO 1 (Observation Preprocessing & Policy Inference)")
+    print("PASS: Part 1 (Observation Preprocessing & Policy Inference)")
 
     # Execute Autonomous Rollout
     rollout_data = run_closed_loop_rollout(env, policy, max_steps=160, device=device)
     assert rollout_data["qpos_history"].shape[0] == 160, "Rollout did not execute expected steps!"
-    print("PASS: TODO 2 (Autonomous Closed-Loop Rollout Execution)")
+    print("PASS: Part 2 (Autonomous Closed-Loop Rollout Execution)")
 
     # Evaluate Tracking Accuracy
     metrics = evaluate_seam_tracking(rollout_data["tcp_positions"])
